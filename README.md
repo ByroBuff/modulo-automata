@@ -15,7 +15,8 @@ E - export the current grid
 I - import a grid
 UP - increase FPS
 DOWN - decrease FPS
-RIGHT - step a single time
+RIGHT - step forwards
+LEFT - step backwards
 A - increase hue
 D - decrease hue
 G - hide/show the grid
