@@ -28,7 +28,6 @@ def blank_grid():
     return [[0 for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
 def display_grid(screen, grid, draw_borders):
-    global CELL_SIZE
     for y, row in enumerate(grid):
         for x, cell in enumerate(row):
             rect = pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
@@ -49,7 +48,6 @@ def calculate_next_grid(grid):
                 total += grid[ny][nx]
             new_grid[y][x] = total % NUM_STAGES
     return new_grid
-
 
 def export_grid(grid):
     root = tk.Tk()
@@ -74,14 +72,18 @@ def import_grid():
             return [list(map(int, line.strip().split())) for line in f]
     return [[0 for _ in range(WIDTH)] for _ in range(HEIGHT)]
 
+def clone_grid(grid):
+    return [row[:] for row in grid]
+
 def main():
     global WIDTH, HEIGHT, CELL_SIZE, NUM_STAGES, FIXED_HUE, FPS
     pygame.init()
     screen = pygame.display.set_mode((TOTAL_SIZE, TOTAL_SIZE))
-    pygame.display.set_caption("Modulo Cells - HSB")
+    pygame.display.set_caption("Modulo Cells")
     clock = pygame.time.Clock()
 
-    grid = [[0 for _ in range(WIDTH)] for _ in range(HEIGHT)]
+    grid = blank_grid()
+    history = []
     running = False
     draw_borders = True
 
@@ -91,31 +93,37 @@ def main():
         y = my // CELL_SIZE
 
         for e in pygame.event.get():
-            if e.type == pygame.QUIT or (e.type==pygame.KEYDOWN and e.key==pygame.K_ESCAPE):
-                pygame.quit(); sys.exit()
+            if e.type == pygame.QUIT or (e.type == pygame.KEYDOWN and e.key == pygame.K_ESCAPE):
+                pygame.quit()
+                sys.exit()
 
             elif e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_SPACE: running = not running
-                elif e.key == pygame.K_r: grid = blank_grid()
-                elif e.key == pygame.K_e: export_grid(grid)
-                elif e.key == pygame.K_i: grid = import_grid(screen)
-                elif e.key == pygame.K_UP:   FPS = min(FPS+1, 60)
-                elif e.key == pygame.K_DOWN: FPS = max(FPS-1, 1)
-
+                if e.key == pygame.K_SPACE:
+                    running = not running
+                elif e.key == pygame.K_r:
+                    grid = blank_grid()
+                    history.clear()
+                elif e.key == pygame.K_e:
+                    export_grid(grid)
+                elif e.key == pygame.K_i:
+                    grid = import_grid()
+                    history.clear()
+                elif e.key == pygame.K_UP:
+                    FPS = min(FPS + 1, 60)
+                elif e.key == pygame.K_DOWN:
+                    FPS = max(FPS - 1, 1)
                 elif e.key == pygame.K_RIGHT:
-                    NUM_STAGES = min(NUM_STAGES+1, 20)
-                elif e.key == pygame.K_LEFT and NUM_STAGES > 2:
-                    NUM_STAGES -= 1
-
-                elif e.key == pygame.K_a: FIXED_HUE += 0.05
-                elif e.key == pygame.K_d: FIXED_HUE -= 0.05
-
-                elif e.key == pygame.K_w and WIDTH < 120:
-                    WIDTH += 2; HEIGHT += 2; grid = blank_grid()
-                elif e.key == pygame.K_s and WIDTH > 4:
-                    WIDTH -= 2; HEIGHT -= 2; grid = blank_grid()
-
-                elif e.key == pygame.K_g: draw_borders = not draw_borders
+                    history.append(clone_grid(grid))
+                    grid = calculate_next_grid(grid)
+                elif e.key == pygame.K_LEFT:
+                    if history:
+                        grid = history.pop()
+                elif e.key == pygame.K_a:
+                    FIXED_HUE += 0.05
+                elif e.key == pygame.K_d:
+                    FIXED_HUE -= 0.05
+                elif e.key == pygame.K_g:
+                    draw_borders = not draw_borders
 
             elif e.type == pygame.MOUSEBUTTONDOWN:
                 if 0 <= x < WIDTH and 0 <= y < HEIGHT:
@@ -124,13 +132,12 @@ def main():
                     elif e.button == 3:
                         grid[y][x] = (grid[y][x] - 1) % NUM_STAGES
 
-                    
-
         screen.fill(BACKGROUND_COLOR)
-        display_grid(screen, grid, draw_borders=draw_borders)
+        display_grid(screen, grid, draw_borders)
         pygame.display.flip()
 
         if running:
+            history.append(clone_grid(grid))
             grid = calculate_next_grid(grid)
             clock.tick(FPS)
         else:
